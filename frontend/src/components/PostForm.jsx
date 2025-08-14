@@ -1,6 +1,7 @@
 // frontend/src/components/PostForm.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import "./PostForm.css";
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -11,11 +12,19 @@ const PostForm = () => {
 
     const fetchPosts = async () => {
         try {
-            const res = await axios.get(`${API}/api/posts`);
+            setLoading(true); // 새로고침에도 로딩 적용
+            const res = await axios.get(`${API}/api/posts`, {
+                // 캐시 무효화
+                headers: { "Cache-Control": "no-cache" },
+                params: { t: Date.now() }, // 쿼리스트링으로 강제 새 요청
+                validateStatus: (s) => s >= 200 && s < 300 || s === 304,
+            });
             const data = Array.isArray(res.data) ? res.data : res.data.posts ?? [];
             setPosts(data);
         } catch (e) {
             console.error("불러오기 실패", e);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -52,9 +61,11 @@ const PostForm = () => {
     };
 
     return (
-        <div>
+        <div className="post-wrap">
+            <h2>게시글</h2>
+
             {/* 작성 폼 */}
-            <form onSubmit={onSubmit} style={{ display: "grid", gap: 8, marginBottom: 24 }}>
+            <form className="post-controls" onSubmit={onSubmit}>
                 <input
                     name="title"
                     placeholder="제목"
@@ -74,27 +85,40 @@ const PostForm = () => {
                     value={form.content}
                     onChange={onChange}
                 />
-                <button type="submit" disabled={loading}>
-                    {loading ? "등록 중..." : "등록"}
-                </button>
+                <div>
+                    <button className="btn" type="submit" disabled={loading}>
+                        {loading ? "등록 중..." : "등록"}
+                    </button>
+                    <button
+                        className="btn refresh"
+                        type="button"
+                        onClick={fetchPosts}
+                        disabled={loading}
+                    >
+                        {loading ? "불러오는 중..." : "새로고침"}
+                    </button>
+                </div>
             </form>
 
             {/* 목록 */}
-            <div style={{ display: "grid", gap: 12 }}>
+            <ul className="post-list">
                 {posts.map((post) => (
-                    <div key={post._id} style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-                        <div style={{ fontWeight: 700 }}>{post.title}</div>
-                        <div style={{ color: "#666", fontSize: 14 }}>
-                            {post.author || "익명"} · {new Date(post.createdAt).toLocaleString()}
+                    <li key={post._id}>
+                        <h3>{post.title}</h3>
+                        <small>
+                            {post.author || "익명"} ·{" "}
+                            {new Date(post.createdAt).toLocaleString()}
+                        </small>
+                        <p>{post.content}</p>
+                        <div>
+                            <button className="btn delete" onClick={() => onDelete(post._id)}>
+                                삭제
+                            </button>
                         </div>
-                        <div style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>{post.content}</div>
-                        <div style={{ marginTop: 8 }}>
-                            <button onClick={() => onDelete(post._id)}>삭제</button>
-                        </div>
-                    </div>
+                    </li>
                 ))}
-                {posts.length === 0 && <div>게시글이 없습니다.</div>}
-            </div>
+                {posts.length === 0 && <li>게시글이 없습니다.</li>}
+            </ul>
         </div>
     );
 };

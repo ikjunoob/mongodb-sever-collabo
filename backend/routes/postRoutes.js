@@ -17,6 +17,7 @@ router.post("/", async (req, res) => {
 // READ - 전체
 router.get("/", async (_req, res) => {
     try {
+        res.set("Cache-Control", "no-store"); // ← 추가
         const posts = await Post.find().sort({ createdAt: -1 });
         res.status(200).json(posts);
     } catch (error) {
@@ -27,6 +28,7 @@ router.get("/", async (_req, res) => {
 // READ - 단건
 router.get("/:id", async (req, res) => {
     try {
+        res.set("Cache-Control", "no-store"); // ← 추가
         const post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: "글을 찾을 수 없음" });
         res.status(200).json(post);
